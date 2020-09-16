@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+
+<title>Very simple WebRTC application with a Node.js signalling server</title>
+
+</head>
+
+<body>
+
+<div id='mainDiv'>
+
+	<table border="1" width="100%">
+		<tr>
+			<th>
+				Local video
+			</th>
+			<th>
+				'Remote' video
+			</th>		
+		</tr>
+		<tr>
+			<td>
+				<video id="localVideo" muted autoplay></video>
+			</td>
+			<td>
+				<video id="remoteVideo" autoplay ></video>						
+			</td>	
+		</tr>		
+	</table>
+</div>
+
+<script src='/socket.io/socket.io.js'></script>
+<script src='js/lib/adapter.js'></script>
+<script src='js/client.js'></script>
+
+</body>
+</html>
