@@ -6,28 +6,29 @@ window.onbeforeunload = function (e) {
   hangup();
 };
 
+const peers = new Map();
 
 
 // HTML5 <video> elements
-var localVideo = document.querySelector("#localVideo");
-var remoteVideo = document.querySelector("#remoteVideo");
+const localVideo = document.querySelector("#localVideo");
+const remoteVideo = document.querySelector("#remoteVideo");
 
 
 
 // WebRTC data structures
 // Streams
-var localStream;
-var remoteStream;
+let localStream;
+let remoteStream;
 // Peer Connection
 
-var peerConfig = null;
+const peerConfig = null;
 
 /////////////////////////////////////////////
 
 // Let's get started: prompt user for input (room name)
-var room = prompt("Enter room name:");
+const room = prompt("Enter room name:");
 
-var socket = io.connect();
+const socket = io.connect();
 
 
 // Send 'Create or join' message to singnalling server
@@ -96,6 +97,8 @@ const startApp = function(mediaStream){
       for(const track of mediaStream.getTracks()){
         pc.addTrack(track);
       }
+
+      peers.set(peerId, pc);
       return pc;
 
     } catch (e) {
@@ -136,16 +139,22 @@ const startApp = function(mediaStream){
   
   socket.on('peerAnswer', Answer => {
     console.log('resposta de ', Answer.from);
-    console.log('Achou o peer');
-    pc.setRemoteDescription(new RTCSessionDescription(Answer.sdp))
-      .catch(e => console.log('Error: ', e));
+    const pc = peers.get(Answer.from);
+    if(pc){
+      console.log('Achou o peer', pc);
+      pc.setRemoteDescription(new RTCSessionDescription(Answer.sdp))
+        .catch(e => console.log('Error: ', e));
+    }
   });
   
   socket.on('peerIceCandidate', ice => {
     console.log('recebendo ice');
-    console.log('Recebido iceCandidate de:', ice.from)
-    pc.addIceCandidates(new RTCIceCandidate(ice.candidate))
-      .catch(e => console.log('Error: ', e))
+    const pc = peers.get(ice.from);
+    if(pc){
+      console.log('Recebido iceCandidate de:', ice.from, pc);
+      pc.addIceCandidates(new RTCIceCandidate(ice.candidate))
+        .catch(e => console.log('Error: ', e))
+    }
   })
 }
 
