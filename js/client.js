@@ -1,82 +1,46 @@
-"use strict";
-
-// Clean-up function:
-// collect garbage before unloading browser's window
-window.onbeforeunload = function (e) {
-  hangup();
-};
-
 const peers = new Map();
 
 
 // HTML5 <video> elements
 const localVideo = document.querySelector("#localVideo");
-const remoteVideo = document.querySelector("#remoteVideo");
+const remoteVideoContainer = document.querySelector("#remoteVideoContainer");
 
-
-
-// WebRTC data structures
 // Streams
 let localStream;
-let remoteStream;
-// Peer Connection
 
 const peerConfig = null;
 
-/////////////////////////////////////////////
 
 // Let's get started: prompt user for input (room name)
 const room = prompt("Enter room name:");
-
-const socket = io.connect();
-
-
-// Send 'Create or join' message to singnalling server
-if (room !== "") {
-  console.log("Entrando na sala", room);
-  socket.emit("join", room);
-}
-
-
-// Call getUserMedia()
-// navigator.getUserMedia(constraints, handleUserMedia, handleUserMediaError);
-navigator.mediaDevices.getUserMedia({ video: true, audio: true})
-  .then(mediaStream =>{
-    handleUserMedia(mediaStream);
-    startApp(mediaStream);
-    console.log("Pegando userMedia com constraints:", { video: true,audio: true});
-  })
-  .catch(e => console.log('Error: ',e));
-
-
-
-// From this point on, execution proceeds based on asynchronous events...
-
-/////////////////////////////////////////////
 
 // getUserMedia() handlers...
 /////////////////////////////////////////////
 function handleUserMedia(stream) {
   localStream = stream;
+  localVideo.srcObject = localStream;
   localVideo.muted = true;
-  attachMediaStream(localVideo, stream);
+  localVideo.onloadedmetadata= () => localVideo.play();
   console.log("Adicionando stream local.");
 }
 
-/////////////////////////////////////////////
-
-// Server-mediated message exchanging...
-/////////////////////////////////////////////
-
-
-
-////////////////////////////////////////////////
+function handleRemoteStream(mediaStream){
+  const videoElement = document.createElement('video');
+  videoElement.srcObject = mediaStream;
+  videoElement.onloadedmetadata = () => videoElement.play();
+  remoteVideoContainer.appendChild(videoElement);
+}
 
 // Peer Connection management...
 const startApp = function(mediaStream){
+
+  const socket = io.connect();
+
   const createPeerConnection = function(peerId) {
     try {
       const pc = new RTCPeerConnection();
+
+      let remoteStream = null;
 
       pc.onicecandidate = evt => {
             console.log("iceCandidate event: ", evt);
@@ -89,11 +53,18 @@ const startApp = function(mediaStream){
         }
       };
       pc.ontrack = evt => {
-        console.log('stream recebida do remotePeer')
-        remoteStream = evt.streams[0];
-        attachMediaStream(remoteVideo,remoteStream);
-        console.log('adicionando stream remota');
+
+
+        remoteStream = new MediaStream;
+        handleRemoteStream(remoteStream);
+        remoteStream.addTrack(evt.track);
+        // console.log('track recebida do remotePeer')
+        // remoteStream = evt.streams[0];
+        // remoteVideo.srcObject = remoteStream;
+        // console.log('adicionando stream remota');
       }
+
+      // pc.addStream(mediaStream);
       for(const track of mediaStream.getTracks()){
         pc.addTrack(track);
       }
@@ -107,12 +78,8 @@ const startApp = function(mediaStream){
       return;
     }
   }
-
 // 1. Server-->Client...
 /////////////////////////////////////////////
-
-
-
   socket.on('peerConnected', remotePeer => {
     console.log(`Usuário ${remotePeer.id} entrou na sala`);
     const pc = createPeerConnection(remotePeer.id);
@@ -152,16 +119,24 @@ const startApp = function(mediaStream){
     const pc = peers.get(ice.from);
     if(pc){
       console.log('Recebido iceCandidate de:', ice.from, pc);
-      pc.addIceCandidates(new RTCIceCandidate(ice.candidate))
+      pc.addIceCandidate(new RTCIceCandidate(ice.candidate))
         .catch(e => console.log('Error: ', e))
+    }
+  })
+
+  socket.on('connect', () => {
+    if (room !== "") {
+      console.log("Entrando na sala", room);
+      socket.emit("join", room);
     }
   })
 }
 
-
-
-
-
-
-///////////////////////////////////////////
+navigator.mediaDevices.getUserMedia({ video: true, audio: true})
+  .then(mediaStream =>{
+    handleUserMedia(mediaStream);
+    startApp(mediaStream);
+    console.log("Pegando userMedia com constraints:", { video: true,audio: true});
+  })
+  .catch(e => console.log('Error: ',e));
 

@@ -1,6 +1,6 @@
 const static = require("node-static");
 const http = require("http");
-const port = 3001;
+const port = 3005;
 // Create a node-static server instance
 const file = new static.Server();
 
@@ -39,19 +39,19 @@ io.sockets.on("connection", function (socket) {
   socket.on('peerOffer',function(offer){
     const remotePeer = socketes.get(offer.to);
     console.log('Enviando Offer de', socket.id,'para', offer.to)
-    io.to(remotePeer).emit('peerOffer',{from:socket.id, sdp:offer.sdp})
+    remotePeer.emit('peerOffer',{from:socket.id, sdp:offer.sdp})
   });
 
   socket.on('peerAnswer',function(Answer){
     const remotePeer = socketes.get(Answer.to);
     console.log('Enviando Answer de', socket.id,'para', Answer.to)
-    io.to(remotePeer).emit('peerAnswer',{from:socket.id, sdp:Answer.sdp})
+    remotePeer.emit('peerAnswer',{from:socket.id, sdp:Answer.sdp})
   });
 
   socket.on('peerIceCandidate', ice => {
     const remotePeer = socketes.get(ice.to);
     console.log('iceCandidate de',socket.id,'para', ice.to);
-    io.to(remotePeer).emit('peerIceCandidate',{from: socket.id, candidate: ice.candidate}) 
+    remotePeer.emit('peerIceCandidate',{from: socket.id, candidate: ice.candidate}) 
   });
 
 });
