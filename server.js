@@ -1,6 +1,6 @@
 const static = require("node-static");
 const http = require("http");
-const port = 3005;
+const port = 3014;
 // Create a node-static server instance
 const file = new static.Server();
 
@@ -52,6 +52,12 @@ io.sockets.on("connection", function (socket) {
     const remotePeer = socketes.get(ice.to);
     console.log('iceCandidate de',socket.id,'para', ice.to);
     remotePeer.emit('peerIceCandidate',{from: socket.id, candidate: ice.candidate}) 
+  });
+
+  socket.on('disconnect', reason => {
+    socketes.delete(socket.id);
+    console.log('peer',socket.id,'disconectado');
+    socket.broadcast.emit('peerDisconnected', socket.id);
   });
 
 });

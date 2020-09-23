@@ -4,18 +4,18 @@ const peers = new Map();
 // HTML5 <video> elements
 const localVideo = document.querySelector("#localVideo");
 const remoteVideoContainer = document.querySelector("#remoteVideoContainer");
+const muteButton = document.getElementById('muteButton');
+muteButton.onclick = Mute;
 
 // Streams
 let localStream;
 
 const peerConfig = null;
 
+// const room = prompt("Enter room name:");
 
-// Let's get started: prompt user for input (room name)
-const room = prompt("Enter room name:");
+const room = 'teste';
 
-// getUserMedia() handlers...
-/////////////////////////////////////////////
 function handleUserMedia(stream) {
   localStream = stream;
   localVideo.srcObject = localStream;
@@ -24,13 +24,28 @@ function handleUserMedia(stream) {
   console.log("Adicionando stream local.");
 }
 
-function handleRemoteStream(mediaStream){
-  const videoElement = document.createElement('video');
-  videoElement.srcObject = mediaStream;
-  videoElement.onloadedmetadata = () => videoElement.play();
-  remoteVideoContainer.appendChild(videoElement);
+function handleRemoteStream(mediaStream, peerId){
+    const videoElement = document.createElement('video');
+    videoElement.id = peerId;
+    videoElement.srcObject = mediaStream;
+    videoElement.onloadedmetadata = () => videoElement.play();
+    remoteVideoContainer.appendChild(videoElement);
 }
 
+function removeRemoteVideo(peerId){
+  console.log('kkkkkkkkk');
+  remoteVideo = document.getElementById(peerId);
+  remoteVideoContainer.removeChild(remoteVideo);
+}
+
+function Mute(){
+  const enabled = localStream.getAudioTracks()[0].enabled;
+  if (enabled) {
+    localStream.getAudioTracks()[0].enabled = false;
+  } else {
+    localStream.getAudioTracks()[0].enabled = true;
+  }
+}
 // Peer Connection management...
 const startApp = function(mediaStream){
 
@@ -53,16 +68,16 @@ const startApp = function(mediaStream){
         }
       };
       pc.ontrack = evt => {
-
-
+      
         remoteStream = new MediaStream;
-        handleRemoteStream(remoteStream);
+        handleRemoteStream(remoteStream, peerId);
         remoteStream.addTrack(evt.track);
         // console.log('track recebida do remotePeer')
         // remoteStream = evt.streams[0];
         // remoteVideo.srcObject = remoteStream;
         // console.log('adicionando stream remota');
       }
+
 
       // pc.addStream(mediaStream);
       for(const track of mediaStream.getTracks()){
@@ -92,6 +107,13 @@ const startApp = function(mediaStream){
       })
       .then(() => socket.emit('peerOffer',{to:remotePeer.id, sdp: pc.localDescription}))
       .catch(e => console.log('Erro: ', e))
+  });
+
+  socket.on('peerDisconnected', peerId => {
+    console.log('Peer Disconectou');
+    removeRemoteVideo(peerId);
+    removeRemoteVideo(peerId);
+
   });
   
   socket.on('peerOffer', offer => {
@@ -130,6 +152,7 @@ const startApp = function(mediaStream){
       socket.emit("join", room);
     }
   })
+
 }
 
 navigator.mediaDevices.getUserMedia({ video: true, audio: true})
