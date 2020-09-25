@@ -20,20 +20,48 @@ const io = require("socket.io").listen(app);
 
 const socketes = new Map();
 
+const myRoom = {
+  roomName: 'name',
+  roomId: 'id',
+  internal: { members: [] }
+};
+
 // Let's start managing connections...
 io.sockets.on("connection", function (socket) {
 
   socketes.set(socket.id, socket);
 
   // Handle 'join' messages
-  socket.on("join", function (room) {
+  // socket.on("join", function (room) {
     
-    console.log('Peer:',socket.id,"Entrando na sala", room);
-    socket.join(room, () => {
-      console.log(`Emitindo peerConnected para sala ${room}`);
-      // Emite peerConnected quando um segundo cliente entra;
-      socket.to(room).emit('peerConnected', {id: socket.id});
-    });
+  //   console.log('Peer:',socket.id,"Entrando na sala", room);
+  //   socket.join(room, () => {
+  //     console.log(`Emitindo peerConnected para sala ${room}`);
+  //     // Emite peerConnected quando um segundo cliente entra;
+  //     socket.to(room).emit('peerConnected', {id: socket.id});
+  //   });
+  // });
+
+  socket.on("join", room => {
+
+    myRoom.roomId = socket.id;
+    myRoom.roomName = room;
+    Object.freeze(myRoom);
+    if (room == myRoom.roomName) {
+      console.log(socket.id, "entrou na sala", room);
+      myRoom.internal.members.push(socket.id);
+      io.to(socket.id).emit('salute', myRoom.internal.members);
+    }
+    console.log('room name', myRoom.roomName);
+    console.log('room id', myRoom.roomId);
+    console.log('room members', myRoom.internal.members);
+    console.log('room length', myRoom.internal.members.length);
+    // io.to(myRoom.roomId).emit('salute', myRoom.internal.members);
+    for (i = 0; i < myRoom.internal.members.length; i++) {
+      // io.to(myRoom.internal.members[i]).emit('welcome', room);
+      socket.to(myRoom.internal.members[i]).emit("peerConnected", { id: socket.id });
+    }
+
   });
 
   socket.on('peerOffer',function(offer){
