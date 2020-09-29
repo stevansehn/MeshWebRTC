@@ -12,9 +12,8 @@ let localStream;
 
 const peerConfig = null;
 
-// const room = prompt("Enter room name:");
-
-const room = 'teste';
+const room = prompt("Enter room name:");
+// const room = 'teste';
 
 function handleUserMedia(stream) {
   localStream = stream;
@@ -113,7 +112,6 @@ const startApp = function(mediaStream){
     console.log('Peer Disconectou');
     removeRemoteVideo(peerId);
     removeRemoteVideo(peerId);
-
   });
   
   socket.on('peerOffer', offer => {

@@ -17,23 +17,36 @@ console.log("Listening on " + app.address().port);
 // Use socket.io JavaScript library for real-time web applications
 const io = require("socket.io").listen(app);
 
-
 const socketes = new Map();
+const roomsMap = new Map();
 
-const myRoom = {
-  roomName: 'name',
-  roomId: 'id',
-  internal: { members: [] }
+const emitToRoom = (room, evt) => {
+  for (let [key, value] of roomsMap) {
+    if (value == room) {
+      io.to(key).emit(evt);
+    }
+  }
+};
+
+const emitPeerConnected = (myMap, room, socketId) => {
+  let arr = Array.from(myMap.values());
+  if (arr.filter((x) => x == room).length > 1) {
+    for (let [key, value] of myMap) {
+      if (value == room) {
+        console.log(`Emitindo peerConnected para sala ${room}`);
+        io.to(key).emit("peerConnected", { id: socketId });
+      }
+    }
+  }
 };
 
 // Let's start managing connections...
 io.sockets.on("connection", function (socket) {
-
   socketes.set(socket.id, socket);
 
   // Handle 'join' messages
   // socket.on("join", function (room) {
-    
+
   //   console.log('Peer:',socket.id,"Entrando na sala", room);
   //   socket.join(room, () => {
   //     console.log(`Emitindo peerConnected para sala ${room}`);
@@ -42,50 +55,39 @@ io.sockets.on("connection", function (socket) {
   //   });
   // });
 
-  socket.on("join", room => {
-
-    myRoom.roomId = socket.id;
-    myRoom.roomName = room;
-    Object.freeze(myRoom);
-    if (room == myRoom.roomName) {
-      console.log(socket.id, "entrou na sala", room);
-      myRoom.internal.members.push(socket.id);
-      io.to(socket.id).emit('salute', myRoom.internal.members);
-    }
-    console.log('room name', myRoom.roomName);
-    console.log('room id', myRoom.roomId);
-    console.log('room members', myRoom.internal.members);
-    console.log('room length', myRoom.internal.members.length);
-    // io.to(myRoom.roomId).emit('salute', myRoom.internal.members);
-    for (i = 0; i < myRoom.internal.members.length; i++) {
-      // io.to(myRoom.internal.members[i]).emit('welcome', room);
-      socket.to(myRoom.internal.members[i]).emit("peerConnected", { id: socket.id });
-    }
-
+  socket.on("join", (room) => {
+    roomsMap.set(socket.id, room);
+    console.log("S:", roomsMap);
+    // emitToRoom(room, "salute");
+    emitPeerConnected(roomsMap, room, socket.id);
   });
 
-  socket.on('peerOffer',function(offer){
+  socket.on("peerOffer", function (offer) {
     const remotePeer = socketes.get(offer.to);
-    console.log('Enviando Offer de', socket.id,'para', offer.to)
-    remotePeer.emit('peerOffer',{from:socket.id, sdp:offer.sdp})
+    console.log("Enviando Offer de", socket.id, "para", offer.to);
+    remotePeer.emit("peerOffer", { from: socket.id, sdp: offer.sdp });
   });
 
-  socket.on('peerAnswer',function(Answer){
+  socket.on("peerAnswer", function (Answer) {
     const remotePeer = socketes.get(Answer.to);
-    console.log('Enviando Answer de', socket.id,'para', Answer.to)
-    remotePeer.emit('peerAnswer',{from:socket.id, sdp:Answer.sdp})
+    console.log("Enviando Answer de", socket.id, "para", Answer.to);
+    remotePeer.emit("peerAnswer", { from: socket.id, sdp: Answer.sdp });
   });
 
-  socket.on('peerIceCandidate', ice => {
+  socket.on("peerIceCandidate", (ice) => {
     const remotePeer = socketes.get(ice.to);
-    console.log('iceCandidate de',socket.id,'para', ice.to);
-    remotePeer.emit('peerIceCandidate',{from: socket.id, candidate: ice.candidate}) 
+    console.log("iceCandidate de", socket.id, "para", ice.to);
+    remotePeer.emit("peerIceCandidate", {
+      from: socket.id,
+      candidate: ice.candidate,
+    });
   });
 
-  socket.on('disconnect', reason => {
+  socket.on("disconnect", (reason) => {
     socketes.delete(socket.id);
-    console.log('peer',socket.id,'disconectado');
-    socket.broadcast.emit('peerDisconnected', socket.id);
+    roomsMap.delete(socket.id);
+    console.log("peer", socket.id, "desconectado");
+    socket.broadcast.emit("peerDisconnected", socket.id);
+    console.log("S:", roomsMap);
   });
-
 });
